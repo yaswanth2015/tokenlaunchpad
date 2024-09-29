@@ -1,0 +1,14 @@
+.signupContainer {
+    margin-left: 30%;
+    margin-right: 30%;
+    margin-top: 200px;
+    min-width: 500px;
+    border-radius: 8px;
+    border-color: black;
+    border-style: groove;
+    border-width: 1px;
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
