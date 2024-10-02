@@ -5,6 +5,7 @@ import "./Login.css"
 import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { redirect } from "next/dist/server/api-utils/index";
 
 
 
@@ -19,8 +20,9 @@ export default function Login() {
             email: email,
             password: password
         }).then((resp)=>{
-            const token = resp.data.token
-            //MARK: Add redie
+            const token:string = resp.data.token as string
+            localStorage.setItem("tokenlaunchpadToken", token)
+            router.push("/dashboard")
         }).catch((err)=>{
             alert("Error in fetching details")
         })
@@ -32,7 +34,10 @@ export default function Login() {
 
     return <div className = "loginContainer">
             <UserName props={{email, setEmail}} />
-            <Password props={{password, setPassword}}/>
+            <Password props={{password: password, onchange: (e:any)=>{
+                const value = e.target.value
+                setPassword(value)
+            }}}/>
             <div className="d-grid gap-2">
                 <button
                     type="button"
