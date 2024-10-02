@@ -86,7 +86,11 @@ export default function Dashboard() {
             publicKey: publicKey,
             secretKey: secretKey
         }
-        solanaToken.createMint(connection, payer, publicKey, publicKey, 5, solana.Keypair.fromSecretKey(secretKey)).then((publicKey)=>{
+        alert(`want to create token ${dashboard.solbalance}`)
+        const confOptions: solana.ConfirmOptions = {
+            commitment: "finalized"
+        }
+        solanaToken.createMint(connection, payer, publicKey, publicKey, 9, undefined, confOptions).then((publicKey)=>{
             alert(`your new token mint account is ${publicKey.toBase58()}`)
             const newaccount = dashboard.ownedmintAccounts
             newaccount.push(publicKey.toBase58())
@@ -102,14 +106,14 @@ export default function Dashboard() {
         })
     }
 
-    function fetchAllTokenAccounts(keys: keys) {
+    async function fetchAllTokenAccounts(keys: keys) {
         const connection = new solana.Connection(Constants.RPC_URL)
         const pubKey = new solana.PublicKey(keys.publickey)
-        connection.getTokenAccountsByOwner(pubKey, { mint: pubKey }).then((response)=>{
-            console.log(response)
-        }).catch((error)=>{
-            console.log(error)
-        })
+        const signature = await connection.getSignaturesForAddress(pubKey)
+        // const transactionInfo: 
+        for(let i=0; i<signature.length;++i){
+            const signAtureInfo = await connection.getSignatureStatus
+        }
 
     }
     
