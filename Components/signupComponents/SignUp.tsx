@@ -1,7 +1,4 @@
 "use client"
-import axios from "axios"
-import { redirect } from "next/dist/server/api-utils/index"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Input from "../CommonComponents/Input"
 import "./SignUp.css"
@@ -12,25 +9,8 @@ export default function SignUp() {
     const [password, setPassword] = useState("")
     const [publickey, setPublicKey] = useState("")
     const [privatekey, setPrivatekey] = useState("")
-    const router = useRouter()
 
     function onsubmit(e: any) {
-        console.log(e)
-        axios.post("https://tokenlaunchpad-backend-server.vercel.app/api/user/signup", {
-            email: email,
-            password: password,
-            publickey: publickey,
-            privatekey: privatekey
-        }).then((res)=>{
-            alert("Successfully signup")
-            router.push("/")
-        }).catch(()=>{
-            alert("Error in signing up please tryagain")
-            setEmail("")
-            setPassword("")
-            setPrivatekey("")
-            setPublicKey("")
-        })
 
     }
 
@@ -56,7 +36,7 @@ export default function SignUp() {
                     type="button"
                     name=""
                     className="btn btn-primary"
-                    onClick={onsubmit}
+                    onSubmit={onsubmit}
                 >
                     Sign Up
                 </button>
