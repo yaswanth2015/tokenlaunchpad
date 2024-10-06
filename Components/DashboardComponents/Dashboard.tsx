@@ -10,6 +10,7 @@ import Button from "../CommonComponents/button"
 import * as solanaToken from "@solana/spl-token"
 import * as Constants from "../../Constants"
 import * as base58 from "bs58"
+import * as nacl from "tweetnacl"
 
 interface Dashboard {
     privatekey: string,
@@ -68,53 +69,113 @@ export default function Dashboard() {
     },[dashboard.publickey, dashboard.ownedmintAccounts])
 
     const ownedAccounts = () =>{
-        if(dashboard.ownedmintAccounts.length!=0) {
+        //console.log(dashboard.ownedmintAccounts)
+        const items = dashboard.ownedmintAccounts.map((value)=>{
+            return <li><Input props = {{placeholder: "Mint Account", value: value, onchange: ()=>{}, disable: true}}/></li>
+        })
+        //console.log(items)
+        if(dashboard.ownedmintAccounts.length!==0) {
             return <>
-            <h4>Owned Mint Accounts</h4>
-            {dashboard.ownedmintAccounts.forEach((ownedAccountAddress, index, arr)=>{
-                <Input id={index} props = {{placeholder: "Mint Account", value: ownedAccountAddress, onchange: ()=>{}, disable: true}}/>
-            })}
+                <h1>Owned Mint Accounts</h1>
+                <br />
+                <ul>
+                {items}
+                </ul>
             </>
         }
     }
 
-    const generateMintAccount = (keys: keys) => {
-        const connection = new solana.Connection(Constants.RPC_URL, "confirmed")
-        const secretKey = base58.default.decode(dashboard.privatekey)
-        const publicKey = new solana.PublicKey(dashboard.publickey)
-        const payer = {
-            publicKey: publicKey,
-            secretKey: secretKey
+    const generateMintAccount = async (keys: keys) => {
+        //STEPS FOR Creating MINT Account
+        //1. Create System program
+        //2. Write Instructions for making the account as mint account
+        //3. sign the message
+        const ownerKeys = solana.Keypair.fromSecretKey(base58.default.decode(keys.privatekey))
+        const connection = new solana.Connection(Constants.RPC_URL)
+        const rentExcemptionLamports = await solanaToken.getMinimumBalanceForRentExemptMint(connection)
+        const latestBlockHash = await connection.getLatestBlockhash('confirmed')
+        const newkeyPairForMintAccount = solana.Keypair.generate()
+        const blockHash: solana.TransactionBlockhashCtor = {
+            feePayer: ownerKeys.publicKey,
+            blockhash: latestBlockHash.blockhash,
+            lastValidBlockHeight: latestBlockHash.lastValidBlockHeight
         }
-        alert(`want to create token ${dashboard.solbalance}`)
-        const confOptions: solana.ConfirmOptions = {
-            commitment: "finalized"
-        }
-        solanaToken.createMint(connection, payer, publicKey, publicKey, 9, undefined, confOptions).then((publicKey)=>{
-            alert(`your new token mint account is ${publicKey.toBase58()}`)
-            const newaccount = dashboard.ownedmintAccounts
-            newaccount.push(publicKey.toBase58())
-            setDashBoard({
-                privatekey: dashboard.privatekey,
-                publickey: dashboard.publickey,
-                solbalance: dashboard.solbalance,
-                ownedmintAccounts: newaccount,
-            })
-        }).catch((error)=>{
-            console.log("error in creating token")
-            console.log(error)
-        })
+        const transaction = new solana.Transaction(blockHash)
+
+        transaction.add(
+            solana.SystemProgram.createAccount({
+                fromPubkey: ownerKeys.publicKey,
+                newAccountPubkey: newkeyPairForMintAccount.publicKey,
+                space: solanaToken.MINT_SIZE,
+                lamports: rentExcemptionLamports,
+                programId: solanaToken.TOKEN_PROGRAM_ID
+            }),
+            solanaToken.createInitializeMint2Instruction(
+                newkeyPairForMintAccount.publicKey, 
+                2, 
+                ownerKeys.publicKey,
+                ownerKeys.publicKey,
+                solanaToken.TOKEN_PROGRAM_ID,
+            )
+        )
+
+        const transactionBufferMessage = transaction.serializeMessage()
+        const messageSignature = nacl.sign.detached(transactionBufferMessage, ownerKeys.secretKey)
+        transaction.addSignature(ownerKeys.publicKey, Buffer.from(messageSignature))
+        let isSignatureVerified = transaction.verifySignatures()
+        
+        const transactionSignature = await solana.sendAndConfirmTransaction(connection, transaction, [ownerKeys, newkeyPairForMintAccount])
+        console.log(transactionSignature)
+        //MARK: Above code is for sending raw transaction
+        //MARK: Below code is for inbuilt functions
+        // const connection = new solana.Connection(Constants.RPC_URL, "confirmed")
+        // const secretKey = base58.default.decode(dashboard.privatekey)
+        // const publicKey = new solana.PublicKey(dashboard.publickey)
+        // const payer = {
+        //     publicKey: publicKey,
+        //     secretKey: secretKey
+        // }
+        // const confOptions: solana.ConfirmOptions = {
+        //     commitment: 'confirmed'
+        // }
+        // solanaToken.createMint(connection, payer, publicKey, publicKey, 9, undefined, confOptions).then((publicKey)=>{
+        //     alert(`your new token mint account is ${publicKey.toBase58()}`)
+        //     const newaccount = dashboard.ownedmintAccounts
+        //     newaccount.push(publicKey.toBase58())
+        //     setDashBoard({
+        //         privatekey: dashboard.privatekey,
+        //         publickey: dashboard.publickey,
+        //         solbalance: dashboard.solbalance,
+        //         ownedmintAccounts: newaccount,
+        //     })
+        // }).catch((error)=>{
+        //     console.log("error in creating token")
+        //     console.log(error)
+        // })
     }
 
     async function fetchAllTokenAccounts(keys: keys) {
         const connection = new solana.Connection(Constants.RPC_URL)
-        const pubKey = new solana.PublicKey(keys.publickey)
-        const signature = await connection.getSignaturesForAddress(pubKey)
-        // const transactionInfo: 
-        for(let i=0; i<signature.length;++i){
-            const signAtureInfo = await connection.getSignatureStatus
+        const ownerKeys = solana.Keypair.fromSecretKey(base58.default.decode(keys.privatekey)); 
+        const signatures = await connection.getSignaturesForAddress(ownerKeys.publicKey)
+        const ownedmintAccounts: string[] = []
+        for(const signatureOfTxn of signatures) {
+            const info = await connection.getTransaction(signatureOfTxn.signature)
+            if (info !== null && info.meta?.logMessages?.find((value)=>{ return value===Constants.tokeMINTInit }) !== undefined && info.meta?.logMessages?.find((value)=>{ return value===Constants.tokenProgramSuccessMessageLogMessage }) !== undefined ) {
+                for(let accountkey of info?.transaction.message.accountKeys){
+                    if (accountkey.toBase58() !==  ownerKeys.publicKey.toBase58() && accountkey.toBase58() !== solanaToken.TOKEN_PROGRAM_ID.toBase58() && accountkey.toBase58() !== solana.SystemProgram.programId.toBase58()) {
+                        ownedmintAccounts.push(accountkey.toBase58())
+                    }
+                }
+            }
         }
-
+        //console.log(ownedmintAccounts)
+        setDashBoard({
+            privatekey: dashboard.privatekey,
+            publickey: dashboard.publickey,
+            solbalance: dashboard.solbalance,
+            ownedmintAccounts: ownedmintAccounts
+        })
     }
     
 
