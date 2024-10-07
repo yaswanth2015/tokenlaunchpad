@@ -11,6 +11,7 @@ import * as solanaToken from "@solana/spl-token"
 import * as Constants from "../../Constants"
 import * as base58 from "bs58"
 import * as nacl from "tweetnacl"
+import MintAccountDetails from "../MintAccountDetails/MintAccount"
 
 interface Dashboard {
     privatekey: string,
@@ -71,7 +72,7 @@ export default function Dashboard() {
     const ownedAccounts = () =>{
         //console.log(dashboard.ownedmintAccounts)
         const items = dashboard.ownedmintAccounts.map((value)=>{
-            return <li><Input props = {{placeholder: "Mint Account", value: value, onchange: ()=>{}, disable: true}}/></li>
+            return <li><MintAccountDetails mintAccount={value} owner={{secretKey: base58.default.decode(dashboard.privatekey), publicKey: new solana.PublicKey(dashboard.publickey)}}/></li>
         })
         //console.log(items)
         if(dashboard.ownedmintAccounts.length!==0) {

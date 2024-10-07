@@ -1,0 +1,14 @@
+.mintContainer {
+    border-radius: 8px;
+    border-color: rgb(67, 67, 67);
+    border-style: groove;
+    border-width: 1px;
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    background-color: #d7f9f9;
+    color: black;
+}
