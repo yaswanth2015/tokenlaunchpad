@@ -15,16 +15,24 @@ async function getSupply(mintAccount: String) {
     alert(`Total Supply of the token ${mintAccount} is ${supply.value.amount}`)
 }
 
-async function MintTo(sendTo: String, mintAccount: String, owner: solana.Signer) {
+async function MintTo(sendTo: solana.PublicKey, mintAccount: String, owner: solana.Signer) {
     const connection = new solana.Connection(Constants.RPC_URL)
     const mintAccountAddress = new solana.PublicKey(mintAccount);
-    const signature = await solanaToken.mintTo(connection, owner, mintAccountAddress, owner.publicKey, owner, 10000000)
+    const tokenAccount = solanaToken.getAssociatedTokenAddressSync(mintAccountAddress, sendTo)
+    console.log(tokenAccount.toBase58())
+    const signature = await solanaToken.mintTo(connection, owner, mintAccountAddress,  tokenAccount, owner, 10000000)
+}
+
+async function createAssociatedAccount(mintAccount: solana.PublicKey, newAccountOwner: solana.PublicKey, payer: solana.Signer) {
+    const connection = new solana.Connection(Constants.RPC_URL)
+    const associatedAccount = await solanaToken.createAssociatedTokenAccount(connection,payer, mintAccount, newAccountOwner )
+    alert(`new associated Account ${associatedAccount.toBase58()}`)
 }
 
 function ExpandSectionofMint(props: {mintAddres: String, owner: solana.Signer}) {
 
     return <div style={{display: "flex", justifyContent: "space-between"}}>
-        <div><Button props={{onclick: ()=>{MintTo("", props.mintAddres, props.owner)}, buttonname: "Mint To" }}/></div>
+        <div><Button props={{onclick: ()=>{MintTo(props.owner.publicKey, props.mintAddres, props.owner)/*createAssociatedAccount(new solana.PublicKey(props.mintAddres), props.owner.publicKey, props.owner)*/}, buttonname: "Create Associated Account" }}/></div>
         <div><Button props={{onclick: ()=>{getSupply(props.mintAddres)}, buttonname: "Get Supply" }}/></div>
     </div>
     
